@@ -42,14 +42,14 @@ module ActiveRecord
       reload!
       src = config(source_db, :source)
       dst = config(dest_db, :destination)
-      %x{ssh #{src.server_username}@#{src.server} 'mysqldump --skip-lock-tables --single-transaction -h#{src.host} -u#{src.username} -p"#{src.password}" #{src.database} | gzip -9' | gzip -cd | mysql -u#{dst.username} -p#{dst.password} #{dst.database}}
+      %x{ssh #{src.server_username}@#{src.server} 'mysqldump --skip-lock-tables --single-transaction -h#{src.host} -u#{src.username} -p"#{src.password}" #{src.database} | gzip -9' | gzip -cd | mysql -h#{dst.host} -u#{dst.username} -p#{dst.password} #{dst.database}}
     end
 
     def self.copy_table(source_db, dest_db, table_name)
       reload!
       src = config(source_db, :source)
       dst = config(dest_db, :destination)
-      %x{ssh #{src.server_username}@#{src.server} 'mysqldump --skip-lock-tables --single-transaction -h#{src.host} -u#{src.username} -p"#{src.password}" #{src.database} #{table_name} | gzip -8' | gzip -cd | mysql -u#{dst.username} -p#{dst.password} #{dst.database}}
+      %x{ssh #{src.server_username}@#{src.server} 'mysqldump --skip-lock-tables --single-transaction -h#{src.host} -u#{src.username} -p"#{src.password}" #{src.database} #{table_name} | gzip -8' | gzip -cd | mysql -h#{dst.host} -u#{dst.username} -p#{dst.password} #{dst.database}}
     end
 
     def self.incremental_copy(source_db, dest_db)
@@ -73,7 +73,7 @@ module ActiveRecord
         cmd_incr = %{--skip-add-drop-table --no-create-info --insert-ignore}
         cmd_id   = %{--where "id > #{dst_id}"}
         cmd_src  = %{#{src.database}}
-        cmd_dst  = %{| gzip -9' | gzip -cd | mysql -u#{dst.username} -p#{dst.password} #{dst.database}}
+        cmd_dst  = %{| gzip -9' | gzip -cd | mysql -h#{dst.host} -u#{dst.username} -p#{dst.password} #{dst.database}}
         if dst_id && src_id && src_id > dst_id
           [ cmd_base, cmd_incr, cmd_id, cmd_src, table_name, cmd_dst ].join(' ').strip
         end
@@ -93,7 +93,7 @@ module ActiveRecord
       cmd_src          = %{#{src.database}}
       cmd_incr_tables  = %{#{incr_tables.map(&:to_s).join(' ')}}
       cmd_whole_tables = %{#{whole_tables.map(&:to_s).join(' ')}}
-      cmd_dst          = %{| gzip -9' | gzip -cd | mysql -u#{dst.username} -p#{dst.password} #{dst.database}}
+      cmd_dst          = %{| gzip -9' | gzip -cd | mysql -h#{dst.host} -u#{dst.username} -p#{dst.password} #{dst.database}}
       incr_cmd         = [ cmd_base, cmd_time, cmd_incr, cmd_src, cmd_incr_tables, cmd_dst ].join(' ').strip
       whole_cmd        = [ cmd_base, cmd_src, cmd_whole_tables, cmd_dst ].join(' ').strip
       [ incr_cmd, whole_cmd ]
